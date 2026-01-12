@@ -3,7 +3,11 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const encodePath = (p) => encodeURI(p);
+  const encodePath = (p) => {
+    if (!p) return "";
+    // macOS(NFD)와 웹 표준(NFC) 간의 한글 자모음 분리 문제를 해결하기 위해 NFC로 정규화합니다.
+    return encodeURI(p.normalize("NFC"));
+  };
 
   const titleToTags = (title) => {
     if (!title) return [];
