@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRS 수선 포트폴리오 (2025-12) · 까사트레이드</title>
+    <meta
+      name="description"
+      content="까사트레이드 CRS 수선 포트폴리오. 가방/지갑 및 주얼리 수선 사례의 전/후 비교와 작업 결과를 확인하세요." />
+    <meta property="og:title" content="CRS 수선 포트폴리오 (2025-12)" />
+    <meta
+      property="og:description"
+      content="가방/지갑 · 주얼리 수선 사례 전/후 포트폴리오" />
+    <meta property="og:type" content="website" />
+
+    <link rel="stylesheet" href="./assets/styles.css?v=20260108-5" />
+  </head>
+  <body class="crs">
+    <div class="topbar">
+      <div class="container">
+        <div class="topbar-inner">
+          <a class="brand" href="./index.html" aria-label="CRS 포트폴리오 홈">
+            <div class="brand-mark">CRS</div>
+            <div class="brand-name">
+              <strong>CRS 수선 포트폴리오</strong>
+              <span>2025-12 · 까사트레이드</span>
+            </div>
+          </a>
+
+          <nav class="nav" aria-label="주요 메뉴">
+            <a href="./index.html">케이스</a>
+            <a href="#contact">문의</a>
+            <a class="btn btn-primary" href="#cases">포트폴리오 보기</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <header class="hero">
+      <div class="container">
+        <div class="hero-grid">
+          <div>
+            <h1>
+              상태 때문에 멈춘 재고를<br />
+              <span class="hl">판매 가능한 상품</span>으로 바꾸는 수선
+            </h1>
+            <p>
+              2025년 12월 기준 CRS 작업 사례를 카테고리별로 정리했습니다. 각
+              케이스에서 전/후 사진과 작업 항목을 확인할 수 있습니다.
+            </p>
+            <div class="controls" id="controls">
+              <div class="controls-row">
+                <div class="search" role="search">
+                  <input
+                    id="searchInput"
+                    type="search"
+                    placeholder="브랜드/작업 항목으로 검색 (예: 프라다, 염색)"
+                    autocomplete="off" />
+                  <span class="hint">ENTER 불필요</span>
+                </div>
+                <div class="filters" aria-label="카테고리 필터">
+                  <button class="pill" type="button" aria-pressed="true" data-cat="ALL">
+                    전체
+                  </button>
+                  <button class="pill" type="button" aria-pressed="false" data-cat="가방/지갑">
+                    가방/지갑
+                  </button>
+                  <button class="pill" type="button" aria-pressed="false" data-cat="주얼리">
+                    주얼리
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="hero-card" aria-label="요약 통계">
+            <div style="font-weight: 900; letter-spacing: -0.03em; font-size: 16px">
+              이번 포트폴리오 한눈에 보기
+            </div>
+            <div class="hero-stats">
+              <div class="stat">
+                <div class="num" id="statCases">-</div>
+                <div class="label">케이스</div>
+              </div>
+              <div class="stat">
+                <div class="num" id="statBefore">-</div>
+                <div class="label">전 사진</div>
+              </div>
+              <div class="stat">
+                <div class="num" id="statAfter">-</div>
+                <div class="label">후 사진</div>
+              </div>
+            </div>
+            <div style="margin-top: 14px; color: var(--muted); font-weight: 700; font-size: 13px">
+              * 사진은 원본 폴더 구조를 그대로 사용합니다.
+            </div>
+          </aside>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid" id="cases">
+      <div class="container">
+        <div id="emptyState" class="empty" style="display: none">
+          검색 결과가 없습니다. 다른 키워드로 다시 시도해보세요.
+        </div>
+        <div class="cards" id="caseList" aria-live="polite"></div>
+      </div>
+    </main>
+
+    <footer class="footer" id="contact">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <h2>CRS 수선 문의</h2>
+            <p>수선 가능 여부/기간/견적이 필요하시면 아래 채널로 문의해주세요.</p>
+            <p id="contactText" style="margin-top: 10px; font-weight: 800"></p>
+          </div>
+          <div class="footer-actions">
+            <a class="btn" href="./index.html#cases">포트폴리오 다시보기</a>
+            <a class="btn btn-primary" href="./index.html#contact">문의하기</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Lightbox (팝업) -->
+    <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="이미지 확대 보기">
+      <div class="lightbox-inner">
+        <div class="lightbox-toolbar">
+          <div class="lightbox-title" id="lightboxTitle">이미지 보기</div>
+          <div class="lightbox-actions">
+            <button class="iconbtn" type="button" id="lightboxPrev" aria-label="이전 이미지">←</button>
+            <button class="iconbtn" type="button" id="lightboxNext" aria-label="다음 이미지">→</button>
+            <button class="iconbtn" type="button" id="lightboxClose" aria-label="닫기">✕</button>
+          </div>
+        </div>
+        <div class="lightbox-stage">
+          <img id="lightboxImg" alt="확대 이미지" />
+        </div>
+      </div>
+    </div>
+
+    <script src="./data/site.js?v=20260108-5"></script>
+    <script src="./data/cases-data.js?v=20260108-5"></script>
+    <script src="./assets/app.js?v=20260108-5"></script>
+  </body>
+</html>
+
+

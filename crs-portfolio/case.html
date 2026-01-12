@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRS 수선 케이스 · 까사트레이드</title>
+    <meta
+      name="description"
+      content="CRS 수선 케이스 상세. 전/후 사진 및 작업 항목을 확인하세요." />
+    <meta property="og:title" content="CRS 수선 케이스" />
+    <meta property="og:description" content="전/후 비교 및 작업 결과" />
+    <meta property="og:type" content="website" />
+
+    <link rel="stylesheet" href="./assets/styles.css?v=20260108-5" />
+  </head>
+  <body class="crs">
+    <div class="topbar">
+      <div class="container">
+        <div class="topbar-inner">
+          <a class="brand" href="./index.html" aria-label="CRS 포트폴리오 홈">
+            <div class="brand-mark">CRS</div>
+            <div class="brand-name">
+              <strong>CRS 수선 포트폴리오</strong>
+              <span>케이스 상세</span>
+            </div>
+          </a>
+          <nav class="nav" aria-label="주요 메뉴">
+            <a href="./index.html">케이스</a>
+            <a href="./index.html#contact">문의</a>
+            <a class="btn btn-primary" href="./index.html#cases">다른 케이스 보기</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <main class="case-wrap">
+      <div class="container">
+        <div class="crumbs">
+          <a href="./index.html">← 목록으로</a>
+          <span class="meta-chip" id="caseCategory">-</span>
+        </div>
+
+        <section class="case-header">
+          <h1 id="caseTitle">-</h1>
+          <div class="chips" id="caseChips"></div>
+        </section>
+
+        <section class="case-sections" id="caseRoot">
+          <div class="panel" id="pairPanel" style="display: none">
+            <h2>전 / 후 비교</h2>
+            <div class="pair">
+              <div class="col">
+                <h3>Before</h3>
+                <div class="gallery" id="beforeGallery"></div>
+              </div>
+              <div class="col">
+                <h3>After</h3>
+                <div class="gallery" id="afterGallery"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" id="singlePanel" style="display: none">
+            <h2>작업 이미지</h2>
+            <div class="gallery" id="singleGallery"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer" id="contact">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <h2>CRS 수선 문의</h2>
+            <p>이 케이스와 유사한 작업 문의가 필요하시면 연락주세요.</p>
+            <p id="contactText" style="margin-top: 10px; font-weight: 800"></p>
+          </div>
+          <div class="footer-actions">
+            <a class="btn" href="./index.html">목록으로</a>
+            <a class="btn btn-primary" href="./index.html#contact">문의하기</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Lightbox (팝업) -->
+    <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-label="이미지 확대 보기">
+      <div class="lightbox-inner">
+        <div class="lightbox-toolbar">
+          <div class="lightbox-title" id="lightboxTitle">이미지 보기</div>
+          <div class="lightbox-actions">
+            <button class="iconbtn" type="button" id="lightboxPrev" aria-label="이전 이미지">←</button>
+            <button class="iconbtn" type="button" id="lightboxNext" aria-label="다음 이미지">→</button>
+            <button class="iconbtn" type="button" id="lightboxClose" aria-label="닫기">✕</button>
+          </div>
+        </div>
+        <div class="lightbox-stage">
+          <img id="lightboxImg" alt="확대 이미지" />
+        </div>
+      </div>
+    </div>
+
+    <script src="./data/site.js?v=20260108-5"></script>
+    <script src="./data/cases-data.js?v=20260108-5"></script>
+    <script src="./assets/app.js?v=20260108-5"></script>
+  </body>
+</html>
+
+
