@@ -44,7 +44,7 @@ def slugify(s: str) -> str:
 # 폴더명에서 가격·수선 종류 파싱 (예: "디올 백-모서리 복원 염색-80,000원")
 PRICE_PATTERN = re.compile(r"[\d,~]+원\s*$")
 
-# 세부 수선명 → 대분류 (세탁, 전체염색, 부분염색, 도금, 복원, 기타)
+# 세부 수선명 → 대분류 (세탁, 염색, 도금, 복원, 기타) — 염색은 전체/부분 구분 없이 하나로
 def repair_to_categories(repair_str: str | None) -> list[str]:
     if not repair_str:
         return []
@@ -52,18 +52,14 @@ def repair_to_categories(repair_str: str | None) -> list[str]:
     cats = set()
     if "세척" in r or "세탁" in r or "오염세척" in r:
         cats.add("세탁")
-    if "전체" in r and ("염색" in r or "복원염색" in r):
-        cats.add("전체염색")
-    if "부분" in r and ("염색" in r or "복원염색" in r):
-        cats.add("부분염색")
+    if "염색" in r or "복원염색" in r:
+        cats.add("염색")
     if "도금" in r:
         cats.add("도금")
     if "복원" in r and "염색" not in r:
         cats.add("복원")
     if "큐빅" in r or "악세사리" in r or "에나멜" in r or "땜" in r or "연결" in r or "제거" in r or "스크래치" in r or "폴리싱" in r or "광택" in r:
         cats.add("기타")
-    if ("염색" in r or "복원염색" in r) and "전체염색" not in cats and "부분염색" not in cats:
-        cats.add("전체염색")
     if not cats:
         cats.add("기타")
     return sorted(cats)

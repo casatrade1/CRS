@@ -514,6 +514,8 @@ button, input{ font: inherit; }
 .chip.accent{ color: var(--accent); border-color: rgba(0,113,227,.25); background: rgba(0,113,227,.08); }
 .price-chip{ font-weight: 800; color: #0a7c42; }
 .repair-chip{ color: var(--muted); }
+.card-work{ display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.work-chip{ font-size: 12px; color: var(--muted); font-weight: 700; }
 
 .case-sections{
   margin-top: 14px;

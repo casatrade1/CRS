@@ -158,11 +158,10 @@
     let activeRepair = "ALL";
     let query = "";
 
-    // 수선 종류 = 대분류만 (세탁, 전체염색, 부분염색, 도금, 복원, 기타)
+    // 수선 종류 = 대분류만 (세탁, 염색, 도금, 복원, 기타)
     const REPAIR_CATEGORY_LABELS = [
       ["세탁", "세탁"],
-      ["전체염색", "전체염색"],
-      ["부분염색", "부분염색"],
+      ["염색", "염색"],
       ["도금", "도금"],
       ["복원", "복원"],
       ["기타", "기타"],
@@ -223,7 +222,9 @@
           const galleryN = c.galleryImages?.length || 0;
           const meta = beforeN || afterN ? `전 ${beforeN} · 후 ${afterN}` : `사진 ${galleryN}`;
           const badgeClass = cat === "주얼리" ? "badge accent" : "badge";
-          const cardTitle = c.productName ? (c.price ? `${safeText(c.productName)} · ${safeText(c.price)}` : safeText(c.productName)) : safeText(c.title);
+          const cardTitle = c.productName ? safeText(c.productName) : safeText(c.title);
+          const priceHtml = c.price ? `<span class="meta-chip price-chip">${safeText(c.price)}</span>` : "";
+          const workChips = (c.repairCategories || []).map((rc) => `<span class="meta-chip work-chip">${safeText(rc)}</span>`).join("");
           const isHeic = !!c.coverIsHeic;
           const fallbackMsg = isHeic ? "HEIC 파일은 Chrome 등 일부 브라우저에서 표시되지 않을 수 있습니다.<br /><button class=\"media-link\" type=\"button\" data-href=\"" + cover + "\">원본 열기</button>" : "이미지를 불러올 수 없습니다.<br /><button class=\"media-link\" type=\"button\" data-href=\"" + cover + "\">원본 열기</button>";
 
@@ -244,6 +245,8 @@
               <div class="card-body">
                 <div class="card-title">${cardTitle}</div>
                 <div class="card-meta">
+                  ${priceHtml}
+                  ${workChips ? `<span class="card-work">${workChips}</span>` : ""}
                   <span class="meta-chip">${meta}</span>
                   <span>상세보기 →</span>
                 </div>
@@ -339,7 +342,7 @@
       return;
     }
 
-    const caseDisplayTitle = found.productName ? (found.price ? `${safeText(found.productName)} · ${safeText(found.price)}` : found.productName) : found.title;
+    const caseDisplayTitle = found.productName ? safeText(found.productName) : found.title;
     const titleEl = $("#caseTitle");
     const catEl = $("#caseCategory");
     if (titleEl) titleEl.textContent = caseDisplayTitle;
