@@ -161,7 +161,7 @@ button, input{ font: inherit; }
 }
 
 .hero{
-  padding: 64px 0 28px;
+  padding: 36px 0 20px;
   border-bottom: 1px solid var(--border);
   background: radial-gradient(1100px 520px at 50% -10%, rgba(0,113,227,.12), transparent 65%);
 }
@@ -195,15 +195,21 @@ button, input{ font: inherit; }
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 22px;
+  padding: 14px 16px;
   box-shadow: var(--shadow);
 }
 
+.hero-card-title{
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  font-size: 14px;
+  color: var(--text);
+}
 .hero-stats{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .stat{
@@ -229,7 +235,7 @@ button, input{ font: inherit; }
 }
 
 .controls{
-  padding: 22px 0 8px;
+  padding: 14px 0 6px;
 }
 
 .controls-row{
@@ -239,10 +245,10 @@ button, input{ font: inherit; }
   flex-wrap: wrap;
 }
 .filter-row{
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--border);
-  gap: 20px;
+  gap: 14px;
 }
 .filter-group{
   display: flex;
@@ -357,7 +363,7 @@ button, input{ font: inherit; }
   font-weight: 900;
   font-size: 12px;
 }
-.card-media.broken .media-fallback{ display:flex; }
+.card-media.broken .media-fallback{ display:flex; flex-direction:column; justify-content:center; }
 .card-media.broken img{ display:none; }
 .media-fallback a,
 .media-fallback .media-link{

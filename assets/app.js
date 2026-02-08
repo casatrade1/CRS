@@ -158,16 +158,25 @@
     let activeRepair = "ALL";
     let query = "";
 
-    // 수선 종류 목록 (전체 케이스에서 유니크)
-    const repairTypes = [...new Set(cases.map((c) => c.repairType).filter(Boolean))].sort();
+    // 수선 종류 = 대분류만 (세탁, 전체염색, 부분염색, 도금, 복원, 기타)
+    const REPAIR_CATEGORY_LABELS = [
+      ["세탁", "세탁"],
+      ["전체염색", "전체염색"],
+      ["부분염색", "부분염색"],
+      ["도금", "도금"],
+      ["복원", "복원"],
+      ["기타", "기타"],
+    ];
+    const repairCategoriesUsed = [...new Set(cases.flatMap((c) => c.repairCategories || []))];
+    const repairPillList = REPAIR_CATEGORY_LABELS.filter(([key]) => repairCategoriesUsed.includes(key));
 
     function matchCase(c) {
       const cat = normalizeCategory(c.category);
-      const hay = `${safeText(c.title)} ${safeText(c.category)} ${safeText(c.repairType)} ${cat}`.toLowerCase();
+      const hay = `${safeText(c.title)} ${safeText(c.productName)} ${safeText(c.category)} ${safeText(c.repairType)} ${(c.repairCategories || []).join(" ")} ${cat}`.toLowerCase();
       const okQuery = !query || hay.includes(query.toLowerCase());
       const okCat = activeCategory === "ALL" || cat === activeCategory;
       const okPrice = matchPriceBand(c.price, activePriceBand);
-      const okRepair = activeRepair === "ALL" || (c.repairType && c.repairType === activeRepair);
+      const okRepair = activeRepair === "ALL" || (c.repairCategories && c.repairCategories.includes(activeRepair));
       return okQuery && okCat && okPrice && okRepair;
     }
 
@@ -190,10 +199,10 @@
       if (filterRepairEl) {
         filterRepairEl.innerHTML =
           `<button class="pill pill-filter" type="button" aria-pressed="true" data-repair="ALL">전체</button>` +
-          repairTypes
+          repairPillList
             .map(
-              (r) =>
-                `<button class="pill pill-filter" type="button" aria-pressed="false" data-repair="${encodeURIComponent(r)}">${safeText(r)}</button>`
+              ([key, label]) =>
+                `<button class="pill pill-filter" type="button" aria-pressed="false" data-repair="${encodeURIComponent(key)}">${safeText(label)}</button>`
             )
             .join("");
       }
@@ -214,29 +223,27 @@
           const galleryN = c.galleryImages?.length || 0;
           const meta = beforeN || afterN ? `전 ${beforeN} · 후 ${afterN}` : `사진 ${galleryN}`;
           const badgeClass = cat === "주얼리" ? "badge accent" : "badge";
-          const priceHtml = c.price ? `<span class="meta-chip price-chip">${safeText(c.price)}</span>` : "";
-          const repairHtml = c.repairType ? `<span class="meta-chip repair-chip">${safeText(c.repairType)}</span>` : "";
+          const cardTitle = c.productName ? (c.price ? `${safeText(c.productName)} · ${safeText(c.price)}` : safeText(c.productName)) : safeText(c.title);
+          const isHeic = !!c.coverIsHeic;
+          const fallbackMsg = isHeic ? "HEIC 파일은 Chrome 등 일부 브라우저에서 표시되지 않을 수 있습니다.<br /><button class=\"media-link\" type=\"button\" data-href=\"" + cover + "\">원본 열기</button>" : "이미지를 불러올 수 없습니다.<br /><button class=\"media-link\" type=\"button\" data-href=\"" + cover + "\">원본 열기</button>";
 
           return `
-            <a class="card" href="./case.html?slug=${encodeURIComponent(c.slug)}" aria-label="${safeText(c.title)} 상세 보기">
-              <div class="card-media">
+            <a class="card" href="./case.html?slug=${encodeURIComponent(c.slug)}" aria-label="${safeText(cardTitle)} 상세 보기">
+              <div class="card-media${isHeic ? " is-heic" : ""}">
                 <span class="${badgeClass}">${cat}</span>
                 ${
                   cover
-                    ? `<img src="${cover}" alt="${safeText(c.title)}" loading="lazy" data-media="true"
+                    ? `<img src="${cover}" alt="${safeText(cardTitle)}" loading="lazy" data-media="true"
                           onerror="this.closest('.card-media') && this.closest('.card-media').classList.add('broken')" />
                        <div class="media-fallback">
-                         이미지가 브라우저에서 열리지 않습니다.<br />
-                         <button class="media-link" type="button" data-href="${cover}">원본 열기</button>
+                         ${fallbackMsg}
                        </div>`
                     : ""
                 }
               </div>
               <div class="card-body">
-                <div class="card-title">${safeText(c.title)}</div>
+                <div class="card-title">${cardTitle}</div>
                 <div class="card-meta">
-                  ${priceHtml}
-                  ${repairHtml}
                   <span class="meta-chip">${meta}</span>
                   <span>상세보기 →</span>
                 </div>
@@ -332,19 +339,18 @@
       return;
     }
 
+    const caseDisplayTitle = found.productName ? (found.price ? `${safeText(found.productName)} · ${safeText(found.price)}` : found.productName) : found.title;
     const titleEl = $("#caseTitle");
     const catEl = $("#caseCategory");
-    if (titleEl) titleEl.textContent = found.title;
+    if (titleEl) titleEl.textContent = caseDisplayTitle;
     if (catEl) catEl.textContent = normalizeCategory(found.category);
 
     const chipWrap = $("#caseChips");
     if (chipWrap) {
-      const tags = titleToTags(found.title);
       const chips = [
         `<span class="chip accent">${normalizeCategory(found.category)}</span>`,
         ...(found.price ? [`<span class="chip price-chip">${safeText(found.price)}</span>`] : []),
-        ...(found.repairType ? [`<span class="chip repair-chip">${safeText(found.repairType)}</span>`] : []),
-        ...tags.map((t) => `<span class="chip">${safeText(t)}</span>`),
+        ...((found.repairCategories || []).map((rc) => `<span class="chip repair-chip">${safeText(rc)}</span>`)),
       ];
       chipWrap.innerHTML = chips.join("");
     }

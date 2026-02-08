@@ -44,24 +44,47 @@ def slugify(s: str) -> str:
 # 폴더명에서 가격·수선 종류 파싱 (예: "디올 백-모서리 복원 염색-80,000원")
 PRICE_PATTERN = re.compile(r"[\d,~]+원\s*$")
 
+# 세부 수선명 → 대분류 (세탁, 전체염색, 부분염색, 도금, 복원, 기타)
+def repair_to_categories(repair_str: str | None) -> list[str]:
+    if not repair_str:
+        return []
+    r = nfc(repair_str).lower()
+    cats = set()
+    if "세척" in r or "세탁" in r or "오염세척" in r:
+        cats.add("세탁")
+    if "전체" in r and ("염색" in r or "복원염색" in r):
+        cats.add("전체염색")
+    if "부분" in r and ("염색" in r or "복원염색" in r):
+        cats.add("부분염색")
+    if "도금" in r:
+        cats.add("도금")
+    if "복원" in r and "염색" not in r:
+        cats.add("복원")
+    if "큐빅" in r or "악세사리" in r or "에나멜" in r or "땜" in r or "연결" in r or "제거" in r or "스크래치" in r or "폴리싱" in r or "광택" in r:
+        cats.add("기타")
+    if ("염색" in r or "복원염색" in r) and "전체염색" not in cats and "부분염색" not in cats:
+        cats.add("전체염색")
+    if not cats:
+        cats.add("기타")
+    return sorted(cats)
 
-def parse_folder_meta(folder_name: str) -> tuple[str | None, str | None]:
-    """폴더명을 파싱해 (가격, 수선종류) 반환. 가격은 '~원' 형태, 수선은 중간 '-' 구간."""
+
+def parse_folder_meta(folder_name: str) -> tuple[str | None, str | None, str | None]:
+    """폴더명을 파싱해 (가격, 수선종류, 제품명) 반환."""
     name = nfc(folder_name).strip()
     parts = [p.strip() for p in name.split("-") if p.strip()]
     if len(parts) < 2:
-        return None, None
+        return None, None, parts[0] if parts else None
+    product_name = parts[0]
     price = None
     repair = None
     if PRICE_PATTERN.search(parts[-1]):
         price = parts[-1]
         if len(parts) > 2:
             repair = " · ".join(parts[1:-1])
-        elif len(parts) == 2:
-            repair = None  # 상품명-가격만 있는 경우
     else:
         repair = " · ".join(parts[1:])
-    return price, repair
+    return price, repair, product_name
 
 
 def rel_from_portfolio(file_path: Path) -> str:
@@ -132,27 +155,34 @@ def build_cases(scan_roots: list[tuple[str, Path]]):
                 continue
 
             title = nfc(case_dir.name).replace("_", " · ")
-            price, repair_type = parse_folder_meta(case_dir.name)
+            price, repair_type, product_name = parse_folder_meta(case_dir.name)
+            repair_cats = repair_to_categories(repair_type) if repair_type else []
 
             base_slug = slugify(f"{category_label}-{title}")
             slug_counts[base_slug] = slug_counts.get(base_slug, 0) + 1
             slug = base_slug if slug_counts[base_slug] == 1 else f"{base_slug}-{slug_counts[base_slug]}"
 
             cover = (after or before or gallery)[0]
+            cover_is_heic = cover.lower().endswith(".heic")
 
             case_entry = {
                 "slug": slug,
                 "category": category_label,
                 "title": title,
                 "coverImage": cover,
+                "coverIsHeic": cover_is_heic,
                 "beforeImages": before,
                 "afterImages": after,
                 "galleryImages": gallery,
             }
+            if product_name:
+                case_entry["productName"] = product_name
             if price:
                 case_entry["price"] = price
             if repair_type:
                 case_entry["repairType"] = repair_type
+            if repair_cats:
+                case_entry["repairCategories"] = repair_cats
             cases.append(case_entry)
 
     return cases
