@@ -5,8 +5,8 @@
 
   const encodePath = (p) => {
     if (!p) return "";
-    // macOS(NFD)와 웹 표준(NFC) 간의 한글 자모음 분리 문제를 해결하기 위해 NFC로 정규화합니다.
-    return encodeURI(p.normalize("NFC"));
+    // 이미지 경로는 JSON/저장소와 동일하게 두어야 함. macOS(Git)는 한글 경로를 NFD로 저장하므로 NFC 정규화 시 404 발생.
+    return encodeURI(String(p));
   };
 
   const titleToTags = (title) => {
