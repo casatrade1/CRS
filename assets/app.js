@@ -225,6 +225,7 @@
           const cardTitle = c.productName ? safeText(c.productName) : safeText(c.title);
           const priceHtml = c.price ? `<span class="meta-chip price-chip">${safeText(c.price)}</span>` : "";
           const workChips = (c.repairCategories || []).map((rc) => `<span class="meta-chip work-chip">${safeText(rc)}</span>`).join("");
+          const workDetail = c.repairType ? `<div class="card-work-detail">${safeText(c.repairType)}</div>` : "";
           const isHeic = !!c.coverIsHeic;
           const fallbackMsg = isHeic ? "HEIC 파일은 Chrome 등 일부 브라우저에서 표시되지 않을 수 있습니다.<br /><button class=\"media-link\" type=\"button\" data-href=\"" + cover + "\">원본 열기</button>" : "이미지를 불러올 수 없습니다.<br /><button class=\"media-link\" type=\"button\" data-href=\"" + cover + "\">원본 열기</button>";
 
@@ -250,6 +251,7 @@
                   <span class="meta-chip">${meta}</span>
                   <span>상세보기 →</span>
                 </div>
+                ${workDetail}
               </div>
             </a>
           `;

@@ -1,5 +1,7 @@
 import json
 import re
+import shutil
+import subprocess
 import unicodedata
 from pathlib import Path
 
@@ -7,6 +9,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve()
 PORTFOLIO_ROOT = HERE.parents[1]  # 07_CRS 사이트 폴더
 DATA_DIR = PORTFOLIO_ROOT / "data"
+WEB_DIR = PORTFOLIO_ROOT / "web"  # HEIC → JPG 변환본 (Chrome 등에서 보이게)
 
 IMG_EXT = {
     ".jpg",
@@ -89,6 +92,26 @@ def rel_from_portfolio(file_path: Path) -> str:
     return str(rel).replace("\\", "/")
 
 
+def convert_heic_to_jpg(heic_path: Path) -> str | None:
+    """HEIC를 JPG로 변환해 web/ 아래에 저장. macOS(sips) 필요. 반환: 상대 경로(web/...) 또는 실패 시 None."""
+    if not shutil.which("sips"):
+        return None
+    try:
+        rel = heic_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
+        jpg_rel = rel.with_suffix(".jpg")
+        out_path = WEB_DIR / jpg_rel
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            ["sips", "-s", "format", "jpeg", str(heic_path.resolve()), "--out", str(out_path)],
+            check=True,
+            capture_output=True,
+            timeout=30,
+        )
+        return "web/" + str(jpg_rel).replace("\\", "/")
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError, Exception):
+        return None
+
+
 def collect_case_images(case_dir: Path) -> dict:
     raw_files = [f for f in case_dir.iterdir() if f.is_file() and f.suffix in IMG_EXT]
     # If both HEIC and JPG exist for the same basename, keep only the preferred one.
@@ -118,6 +141,10 @@ def collect_case_images(case_dir: Path) -> dict:
     for f in files:
         fname = nfc(f.name)
         rel = rel_from_portfolio(f)
+        if f.suffix.lower() == ".heic":
+            jpg_rel = convert_heic_to_jpg(f)
+            if jpg_rel:
+                rel = jpg_rel
 
         # 폴더 구조마다 네이밍이 다르므로 최대한 폭넓게 지원
         # - '전/후' 또는 'before/after'
