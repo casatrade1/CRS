@@ -5,8 +5,7 @@ from pathlib import Path
 
 
 HERE = Path(__file__).resolve()
-PORTFOLIO_ROOT = HERE.parents[1]  # .../2025-12/crs-portfolio
-WORKSPACE_ROOT = PORTFOLIO_ROOT.parents[1]  # .../01.08 코딩
+PORTFOLIO_ROOT = HERE.parents[1]  # 07_CRS 사이트 폴더
 DATA_DIR = PORTFOLIO_ROOT / "data"
 
 IMG_EXT = {
@@ -42,23 +41,33 @@ def slugify(s: str) -> str:
     return s or "case"
 
 
+# 폴더명에서 가격·수선 종류 파싱 (예: "디올 백-모서리 복원 염색-80,000원")
+PRICE_PATTERN = re.compile(r"[\d,~]+원\s*$")
+
+
+def parse_folder_meta(folder_name: str) -> tuple[str | None, str | None]:
+    """폴더명을 파싱해 (가격, 수선종류) 반환. 가격은 '~원' 형태, 수선은 중간 '-' 구간."""
+    name = nfc(folder_name).strip()
+    parts = [p.strip() for p in name.split("-") if p.strip()]
+    if len(parts) < 2:
+        return None, None
+    price = None
+    repair = None
+    if PRICE_PATTERN.search(parts[-1]):
+        price = parts[-1]
+        if len(parts) > 2:
+            repair = " · ".join(parts[1:-1])
+        elif len(parts) == 2:
+            repair = None  # 상품명-가격만 있는 경우
+    else:
+        repair = " · ".join(parts[1:])
+    return price, repair
+
+
 def rel_from_portfolio(file_path: Path) -> str:
-    # Make a URL-ish relative path from PORTFOLIO_ROOT to target file
-    rel = file_path.relative_to(WORKSPACE_ROOT)
-    # portfolio root is workspace/2025-12/crs-portfolio, so we need ../../../?:
-    # easier: compute relative with pathlib
-    rel2 = file_path.resolve().relative_to(WORKSPACE_ROOT.resolve())
-    out = Path("..") / ".." / rel2  # from crs-portfolio/ to workspace/
-    return str(out).replace("\\", "/")
-
-
-def rel_from_portfolio_if_under_2025_12(file_path: Path) -> str:
-    # Prefer shorter ../2025-12/... when possible for readability
-    try:
-        rel_to_2025 = file_path.relative_to(WORKSPACE_ROOT / "2025-12")
-        return ("../" + str(rel_to_2025).replace("\\", "/"))
-    except Exception:
-        return rel_from_portfolio(file_path)
+    """포트폴리오 루트 기준 상대 경로 (웹에서 이미지 경로로 사용)."""
+    rel = file_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
+    return str(rel).replace("\\", "/")
 
 
 def collect_case_images(case_dir: Path) -> dict:
@@ -89,7 +98,7 @@ def collect_case_images(case_dir: Path) -> dict:
     before, after, gallery = [], [], []
     for f in files:
         fname = nfc(f.name)
-        rel = rel_from_portfolio_if_under_2025_12(f)
+        rel = rel_from_portfolio(f)
 
         # 폴더 구조마다 네이밍이 다르므로 최대한 폭넓게 지원
         # - '전/후' 또는 'before/after'
@@ -123,35 +132,36 @@ def build_cases(scan_roots: list[tuple[str, Path]]):
                 continue
 
             title = nfc(case_dir.name).replace("_", " · ")
+            price, repair_type = parse_folder_meta(case_dir.name)
+
             base_slug = slugify(f"{category_label}-{title}")
             slug_counts[base_slug] = slug_counts.get(base_slug, 0) + 1
             slug = base_slug if slug_counts[base_slug] == 1 else f"{base_slug}-{slug_counts[base_slug]}"
 
             cover = (after or before or gallery)[0]
 
-            cases.append(
-                {
-                    "slug": slug,
-                    "category": category_label,
-                    "title": title,
-                    "coverImage": cover,
-                    "beforeImages": before,
-                    "afterImages": after,
-                    "galleryImages": gallery,
-                }
-            )
+            case_entry = {
+                "slug": slug,
+                "category": category_label,
+                "title": title,
+                "coverImage": cover,
+                "beforeImages": before,
+                "afterImages": after,
+                "galleryImages": gallery,
+            }
+            if price:
+                case_entry["price"] = price
+            if repair_type:
+                case_entry["repairType"] = repair_type
+            cases.append(case_entry)
 
     return cases
 
 
 def main():
     scan_roots = [
-        # 기존(2025-12 안)
-        ("가방_지갑", WORKSPACE_ROOT / "2025-12" / "가방_지갑"),
-        ("주얼리", WORKSPACE_ROOT / "2025-12" / "주얼리"),
-        # 추가: file:// 보안 이슈를 피하려고 2025-12 내부 심볼릭 링크 경로를 사용
-        ("가방", WORKSPACE_ROOT / "2025-12" / "가방"),
-        ("주얼리", WORKSPACE_ROOT / "2025-12" / "주얼리-추가"),
+        ("가방_지갑", PORTFOLIO_ROOT / "가방_지갑"),
+        ("주얼리", PORTFOLIO_ROOT / "주얼리"),
     ]
 
     cases = build_cases(scan_roots)

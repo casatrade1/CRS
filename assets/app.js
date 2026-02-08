@@ -20,6 +20,26 @@
 
   const getParam = (key) => new URLSearchParams(location.search).get(key);
 
+  /** 가격 문자열에서 숫자(만원 단위) 추출. "80,000원" -> 8, "15,000원~30,000원" -> 1.5 (최소값) */
+  const priceToBand = (priceStr) => {
+    if (!priceStr || typeof priceStr !== "string") return null;
+    const match = priceStr.replace(/,/g, "").match(/(\d+)/);
+    if (!match) return null;
+    return Math.floor(Number(match[1]) / 10000);
+  };
+
+  /** 가격 밴드에 해당하는지. bandKey: "ALL" | "~5" | "5~10" | "10~15" | "15~" */
+  const matchPriceBand = (casePrice, bandKey) => {
+    if (bandKey === "ALL") return true;
+    const band = priceToBand(casePrice);
+    if (band == null) return bandKey === "ALL";
+    if (bandKey === "~5") return band <= 5;
+    if (bandKey === "5~10") return band > 5 && band <= 10;
+    if (bandKey === "10~15") return band > 10 && band <= 15;
+    if (bandKey === "15~") return band > 15;
+    return true;
+  };
+
   const normalizeCategory = (cat) => {
     if (!cat) return "기타";
     if (cat.includes("가방")) return "가방/지갑";
@@ -129,17 +149,54 @@
     if (statAfter) statAfter.textContent = String(cases.reduce((a, c) => a + (c.afterImages?.length || 0), 0));
 
     const searchInput = $("#searchInput");
-    const pills = $$(".pill");
+    const pills = $$(".pill[data-cat]");
+    const filterPriceEl = $("#filterPrice");
+    const filterRepairEl = $("#filterRepair");
 
     let activeCategory = "ALL";
+    let activePriceBand = "ALL";
+    let activeRepair = "ALL";
     let query = "";
+
+    // 수선 종류 목록 (전체 케이스에서 유니크)
+    const repairTypes = [...new Set(cases.map((c) => c.repairType).filter(Boolean))].sort();
 
     function matchCase(c) {
       const cat = normalizeCategory(c.category);
-      const hay = `${safeText(c.title)} ${safeText(c.category)} ${cat}`.toLowerCase();
+      const hay = `${safeText(c.title)} ${safeText(c.category)} ${safeText(c.repairType)} ${cat}`.toLowerCase();
       const okQuery = !query || hay.includes(query.toLowerCase());
       const okCat = activeCategory === "ALL" || cat === activeCategory;
-      return okQuery && okCat;
+      const okPrice = matchPriceBand(c.price, activePriceBand);
+      const okRepair = activeRepair === "ALL" || (c.repairType && c.repairType === activeRepair);
+      return okQuery && okCat && okPrice && okRepair;
+    }
+
+    function buildFilterPills() {
+      if (filterPriceEl) {
+        const bands = [
+          ["ALL", "전체"],
+          ["~5", "~5만원"],
+          ["5~10", "5~10만원"],
+          ["10~15", "10~15만원"],
+          ["15~", "15만원~"],
+        ];
+        filterPriceEl.innerHTML = bands
+          .map(
+            ([key, label]) =>
+              `<button class="pill pill-filter" type="button" aria-pressed="${key === "ALL"}" data-price-band="${key}">${label}</button>`
+          )
+          .join("");
+      }
+      if (filterRepairEl) {
+        filterRepairEl.innerHTML =
+          `<button class="pill pill-filter" type="button" aria-pressed="true" data-repair="ALL">전체</button>` +
+          repairTypes
+            .map(
+              (r) =>
+                `<button class="pill pill-filter" type="button" aria-pressed="false" data-repair="${encodeURIComponent(r)}">${safeText(r)}</button>`
+            )
+            .join("");
+      }
     }
 
     function render() {
@@ -157,6 +214,8 @@
           const galleryN = c.galleryImages?.length || 0;
           const meta = beforeN || afterN ? `전 ${beforeN} · 후 ${afterN}` : `사진 ${galleryN}`;
           const badgeClass = cat === "주얼리" ? "badge accent" : "badge";
+          const priceHtml = c.price ? `<span class="meta-chip price-chip">${safeText(c.price)}</span>` : "";
+          const repairHtml = c.repairType ? `<span class="meta-chip repair-chip">${safeText(c.repairType)}</span>` : "";
 
           return `
             <a class="card" href="./case.html?slug=${encodeURIComponent(c.slug)}" aria-label="${safeText(c.title)} 상세 보기">
@@ -176,6 +235,8 @@
               <div class="card-body">
                 <div class="card-title">${safeText(c.title)}</div>
                 <div class="card-meta">
+                  ${priceHtml}
+                  ${repairHtml}
                   <span class="meta-chip">${meta}</span>
                   <span>상세보기 →</span>
                 </div>
@@ -228,6 +289,26 @@
       });
     });
 
+    buildFilterPills();
+
+    $("#filterPrice")?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".pill[data-price-band]");
+      if (!btn) return;
+      $$(".pill[data-price-band]").forEach((x) => x.setAttribute("aria-pressed", "false"));
+      btn.setAttribute("aria-pressed", "true");
+      activePriceBand = btn.getAttribute("data-price-band") || "ALL";
+      render();
+    });
+
+    $("#filterRepair")?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".pill[data-repair]");
+      if (!btn) return;
+      $$(".pill[data-repair]").forEach((x) => x.setAttribute("aria-pressed", "false"));
+      btn.setAttribute("aria-pressed", "true");
+      activeRepair = decodeURIComponent(btn.getAttribute("data-repair") || "ALL");
+      render();
+    });
+
     searchInput?.addEventListener("input", () => {
       query = searchInput.value.trim();
       render();
@@ -259,10 +340,13 @@
     const chipWrap = $("#caseChips");
     if (chipWrap) {
       const tags = titleToTags(found.title);
-      chipWrap.innerHTML = [
+      const chips = [
         `<span class="chip accent">${normalizeCategory(found.category)}</span>`,
+        ...(found.price ? [`<span class="chip price-chip">${safeText(found.price)}</span>`] : []),
+        ...(found.repairType ? [`<span class="chip repair-chip">${safeText(found.repairType)}</span>`] : []),
         ...tags.map((t) => `<span class="chip">${safeText(t)}</span>`),
-      ].join("");
+      ];
+      chipWrap.innerHTML = chips.join("");
     }
 
     const before = found.beforeImages || [];

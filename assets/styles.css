@@ -235,8 +235,26 @@ button, input{ font: inherit; }
 .controls-row{
   display:flex;
   gap: 12px;
-  align-items:center;
+  align-items: center;
   flex-wrap: wrap;
+}
+.filter-row{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  gap: 20px;
+}
+.filter-group{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.filter-label{
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 72px;
 }
 
 .search{
@@ -488,6 +506,8 @@ button, input{ font: inherit; }
   color: var(--muted);
 }
 .chip.accent{ color: var(--accent); border-color: rgba(0,113,227,.25); background: rgba(0,113,227,.08); }
+.price-chip{ font-weight: 800; color: #0a7c42; }
+.repair-chip{ color: var(--muted); }
 
 .case-sections{
   margin-top: 14px;
