@@ -245,11 +245,13 @@
               </div>
               <div class="card-body">
                 <div class="card-title">${cardTitle}</div>
-                <div class="card-meta">
+                <div class="card-chips">
                   ${priceHtml}
                   ${workChips ? `<span class="card-work">${workChips}</span>` : ""}
+                </div>
+                <div class="card-meta">
                   <span class="meta-chip">${meta}</span>
-                  <span>상세보기 →</span>
+                  <span class="card-detail-link">상세보기 →</span>
                 </div>
                 ${workDetail}
               </div>
