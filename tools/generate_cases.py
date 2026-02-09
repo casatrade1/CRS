@@ -112,6 +112,20 @@ def convert_heic_to_jpg(heic_path: Path) -> str | None:
         return None
 
 
+def ensure_under_web(file_path: Path) -> str:
+    """이미지를 web/ 아래에 복사해 두고 경로(web/...) 반환. 배포 시 web/만 있으면 되도록."""
+    rel = file_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
+    rel_str = str(rel).replace("\\", "/")
+    out_path = WEB_DIR / rel
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if not out_path.exists() or file_path.stat().st_mtime > out_path.stat().st_mtime:
+            shutil.copy2(file_path, out_path)
+    except OSError:
+        pass
+    return "web/" + rel_str
+
+
 def collect_case_images(case_dir: Path) -> dict:
     raw_files = [f for f in case_dir.iterdir() if f.is_file() and f.suffix in IMG_EXT]
     # If both HEIC and JPG exist for the same basename, keep only the preferred one.
@@ -140,11 +154,11 @@ def collect_case_images(case_dir: Path) -> dict:
     before, after, gallery = [], [], []
     for f in files:
         fname = nfc(f.name)
-        rel = rel_from_portfolio(f)
         if f.suffix.lower() == ".heic":
             jpg_rel = convert_heic_to_jpg(f)
-            if jpg_rel:
-                rel = jpg_rel
+            rel = jpg_rel if jpg_rel else rel_from_portfolio(f)
+        else:
+            rel = ensure_under_web(f)
 
         # 폴더 구조마다 네이밍이 다르므로 최대한 폭넓게 지원
         # - '전/후' 또는 'before/after'
