@@ -8,7 +8,7 @@
     return encodeURI(String(p));
   };
 
-  /** 배포(Vercel 등)에서 한글 경로 이미지 로딩: 절대 URL + NFC 정규화 */
+  /** 배포에서 이미지 로딩: 절대 URL. 경로는 JSON/저장소와 동일하게(NFD) 유지해 Vercel 404 방지 */
   const getBase = () => {
     const p = location.pathname || "/";
     const dir = p.replace(/\/[^/]*$/, "") || "";
@@ -16,8 +16,7 @@
   };
   const imageUrl = (p) => {
     if (!p) return "";
-    const path = String(p).normalize("NFC");
-    return getBase() + encodeURI(path);
+    return getBase() + encodeURI(String(p));
   };
 
   const titleToTags = (title) => {
