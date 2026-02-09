@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import shutil
@@ -10,6 +11,8 @@ HERE = Path(__file__).resolve()
 PORTFOLIO_ROOT = HERE.parents[1]  # 07_CRS 사이트 폴더
 DATA_DIR = PORTFOLIO_ROOT / "data"
 WEB_DIR = PORTFOLIO_ROOT / "web"  # HEIC → JPG 변환본 (Chrome 등에서 보이게)
+SAFE_SUBDIR = "_safe"
+SAFE_DIR = WEB_DIR / SAFE_SUBDIR
 
 IMG_EXT = {
     ".jpg",
@@ -87,19 +90,16 @@ def parse_folder_meta(folder_name: str) -> tuple[str | None, str | None, str | N
 
 
 def rel_from_portfolio(file_path: Path) -> str:
-    """포트폴리오 루트 기준 상대 경로 (웹에서 이미지 경로로 사용). 파일시스템과 동일하게 유지."""
+    """포트폴리오 루트 기준 상대 경로 (웹에서 이미지 경로로 사용)."""
     rel = file_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
     return str(rel).replace("\\", "/")
 
 
-def convert_heic_to_jpg(heic_path: Path) -> str | None:
-    """HEIC를 JPG로 변환해 web/ 아래에 저장. macOS(sips) 필요. 반환: 상대 경로(web/...) 또는 실패 시 None."""
+def convert_heic_to_jpg(heic_path: Path, out_path: Path) -> bool:
+    """HEIC를 JPG로 변환해 지정 경로에 저장. macOS(sips) 필요."""
     if not shutil.which("sips"):
-        return None
+        return False
     try:
-        rel = heic_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
-        jpg_rel = rel.with_suffix(".jpg")
-        out_path = WEB_DIR / jpg_rel
         out_path.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
             ["sips", "-s", "format", "jpeg", str(heic_path.resolve()), "--out", str(out_path)],
@@ -107,26 +107,24 @@ def convert_heic_to_jpg(heic_path: Path) -> str | None:
             capture_output=True,
             timeout=30,
         )
-        return "web/" + str(jpg_rel).replace("\\", "/")
+        return True
     except (subprocess.CalledProcessError, FileNotFoundError, OSError, Exception):
-        return None
+        return False
 
 
-def ensure_under_web(file_path: Path) -> str:
-    """이미지를 web/ 아래에 복사해 두고 경로(web/...) 반환. 파일시스템 경로 그대로 사용."""
-    rel = file_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
-    rel_str = str(rel).replace("\\", "/")
-    out_path = WEB_DIR / rel
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+def write_image_safe(src_path: Path, out_path: Path) -> bool:
+    """이미지를 안전한(ASCII) 경로로 복사/변환."""
     try:
-        if not out_path.exists() or file_path.stat().st_mtime > out_path.stat().st_mtime:
-            shutil.copy2(file_path, out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        if src_path.suffix.lower() == ".heic":
+            return convert_heic_to_jpg(src_path, out_path)
+        shutil.copy2(src_path, out_path)
+        return True
     except OSError:
-        pass
-    return "web/" + rel_str
+        return False
 
 
-def collect_case_images(case_dir: Path) -> dict:
+def collect_case_images(case_dir: Path, case_id: str) -> dict:
     raw_files = [f for f in case_dir.iterdir() if f.is_file() and f.suffix in IMG_EXT]
     # If both HEIC and JPG exist for the same basename, keep only the preferred one.
     by_base: dict[str, list[Path]] = {}
@@ -154,25 +152,30 @@ def collect_case_images(case_dir: Path) -> dict:
     before, after, gallery = [], [], []
     for f in files:
         fname = nfc(f.name)
-        if f.suffix.lower() == ".heic":
-            jpg_rel = convert_heic_to_jpg(f)
-            rel = jpg_rel if jpg_rel else rel_from_portfolio(f)
-        else:
-            rel = ensure_under_web(f)
+
+        def store(kind: str, idx: int) -> str:
+            ext = ".jpg" if f.suffix.lower() == ".heic" else f.suffix.lower()
+            safe_name = f"{kind}-{idx}{ext}"
+            out_path = SAFE_DIR / case_id / safe_name
+            ok = write_image_safe(f, out_path)
+            if not ok:
+                # 실패 시 원본 경로로 폴백 (브라우저에서 안 보일 수 있음)
+                return rel_from_portfolio(f)
+            return f"web/{SAFE_SUBDIR}/{case_id}/{safe_name}"
 
         # 폴더 구조마다 네이밍이 다르므로 최대한 폭넓게 지원
         # - '전/후' 또는 'before/after'
         # - 'A/B' (많이 쓰는 전=A, 후=B)
         if "전" in fname or re.search(r"(?i)\bbefore\b", fname):
-            before.append(rel)
+            before.append(store("before", len(before) + 1))
         elif "후" in fname or re.search(r"(?i)\bafter\b", fname):
-            after.append(rel)
+            after.append(store("after", len(after) + 1))
         elif re.match(r"(?i)^\s*A[\s_-]*\d", fname):
-            before.append(rel)
+            before.append(store("before", len(before) + 1))
         elif re.match(r"(?i)^\s*B[\s_-]*\d", fname):
-            after.append(rel)
+            after.append(store("after", len(after) + 1))
         else:
-            gallery.append(rel)
+            gallery.append(store("gallery", len(gallery) + 1))
 
     return {"before": before, "after": after, "gallery": gallery}
 
@@ -186,11 +189,6 @@ def build_cases(scan_roots: list[tuple[str, Path]]):
             continue
 
         for case_dir in sorted([d for d in root.iterdir() if d.is_dir()], key=lambda p: nfc(p.name)):
-            imgs = collect_case_images(case_dir)
-            before, after, gallery = imgs["before"], imgs["after"], imgs["gallery"]
-            if not (before or after or gallery):
-                continue
-
             title = nfc(case_dir.name).replace("_", " · ")
             price, repair_type, product_name = parse_folder_meta(case_dir.name)
             repair_cats = repair_to_categories(repair_type) if repair_type else []
@@ -198,6 +196,13 @@ def build_cases(scan_roots: list[tuple[str, Path]]):
             base_slug = slugify(f"{category_label}-{title}")
             slug_counts[base_slug] = slug_counts.get(base_slug, 0) + 1
             slug = base_slug if slug_counts[base_slug] == 1 else f"{base_slug}-{slug_counts[base_slug]}"
+
+            case_id_src = f"{category_label}/{case_dir.name}"
+            case_id = "case-" + hashlib.sha1(case_id_src.encode("utf-8")).hexdigest()[:10]
+            imgs = collect_case_images(case_dir, case_id)
+            before, after, gallery = imgs["before"], imgs["after"], imgs["gallery"]
+            if not (before or after or gallery):
+                continue
 
             cover = (after or before or gallery)[0]
             cover_is_heic = cover.lower().endswith(".heic")
