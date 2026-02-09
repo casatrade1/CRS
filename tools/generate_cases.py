@@ -87,9 +87,9 @@ def parse_folder_meta(folder_name: str) -> tuple[str | None, str | None, str | N
 
 
 def rel_from_portfolio(file_path: Path) -> str:
-    """포트폴리오 루트 기준 상대 경로 (웹에서 이미지 경로로 사용)."""
+    """포트폴리오 루트 기준 상대 경로 (웹에서 이미지 경로로 사용). NFC로 통일해 Vercel(Linux) 호환."""
     rel = file_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
-    return str(rel).replace("\\", "/")
+    return nfc(str(rel).replace("\\", "/"))
 
 
 def convert_heic_to_jpg(heic_path: Path) -> str | None:
@@ -98,8 +98,8 @@ def convert_heic_to_jpg(heic_path: Path) -> str | None:
         return None
     try:
         rel = heic_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
-        jpg_rel = rel.with_suffix(".jpg")
-        out_path = WEB_DIR / jpg_rel
+        jpg_rel_str = nfc(str(rel.with_suffix(".jpg")).replace("\\", "/"))
+        out_path = WEB_DIR / jpg_rel_str
         out_path.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
             ["sips", "-s", "format", "jpeg", str(heic_path.resolve()), "--out", str(out_path)],
@@ -107,16 +107,16 @@ def convert_heic_to_jpg(heic_path: Path) -> str | None:
             capture_output=True,
             timeout=30,
         )
-        return "web/" + str(jpg_rel).replace("\\", "/")
+        return "web/" + jpg_rel_str
     except (subprocess.CalledProcessError, FileNotFoundError, OSError, Exception):
         return None
 
 
 def ensure_under_web(file_path: Path) -> str:
-    """이미지를 web/ 아래에 복사해 두고 경로(web/...) 반환. 배포 시 web/만 있으면 되도록."""
+    """이미지를 web/ 아래에 복사해 두고 경로(web/...) 반환. NFC 경로로 저장해 Vercel 호환."""
     rel = file_path.resolve().relative_to(PORTFOLIO_ROOT.resolve())
-    rel_str = str(rel).replace("\\", "/")
-    out_path = WEB_DIR / rel
+    rel_str = nfc(str(rel).replace("\\", "/"))
+    out_path = WEB_DIR / rel_str
     out_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         if not out_path.exists() or file_path.stat().st_mtime > out_path.stat().st_mtime:

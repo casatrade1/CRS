@@ -5,8 +5,19 @@
 
   const encodePath = (p) => {
     if (!p) return "";
-    // 이미지 경로는 JSON/저장소와 동일하게 두어야 함. macOS(Git)는 한글 경로를 NFD로 저장하므로 NFC 정규화 시 404 발생.
     return encodeURI(String(p));
+  };
+
+  /** 배포(Vercel 등)에서 한글 경로 이미지 로딩: 절대 URL + NFC 정규화 */
+  const getBase = () => {
+    const p = location.pathname || "/";
+    const dir = p.replace(/\/[^/]*$/, "") || "";
+    return location.origin + dir + (dir.endsWith("/") ? "" : "/");
+  };
+  const imageUrl = (p) => {
+    if (!p) return "";
+    const path = String(p).normalize("NFC");
+    return getBase() + encodeURI(path);
   };
 
   const titleToTags = (title) => {
@@ -76,7 +87,7 @@
       const img = $("#lightboxImg");
       const title = $("#lightboxTitle");
       if (title) title.textContent = caption || "이미지 보기";
-      if (img && this.items.length) img.src = encodePath(this.items[this.idx]);
+      if (img && this.items.length) img.src = imageUrl(this.items[this.idx]);
 
       document.body.style.overflow = "hidden";
     },
@@ -93,13 +104,13 @@
       if (!this.isOpen || this.items.length === 0) return;
       this.idx = (this.idx + 1) % this.items.length;
       const img = $("#lightboxImg");
-      if (img) img.src = encodePath(this.items[this.idx]);
+      if (img) img.src = imageUrl(this.items[this.idx]);
     },
     prev() {
       if (!this.isOpen || this.items.length === 0) return;
       this.idx = (this.idx - 1 + this.items.length) % this.items.length;
       const img = $("#lightboxImg");
-      if (img) img.src = encodePath(this.items[this.idx]);
+      if (img) img.src = imageUrl(this.items[this.idx]);
     },
   };
 
@@ -129,7 +140,8 @@
 
   function openImageNewTab(url) {
     if (!url) return;
-    window.open(encodePath(url), "_blank", "noopener,noreferrer");
+    const href = /^https?:\/\//i.test(url) ? url : getBase() + encodePath(url);
+    window.open(href, "_blank", "noopener,noreferrer");
   }
 
   // ---------- Index ----------
@@ -216,7 +228,7 @@
       listEl.innerHTML = filtered
         .map((c) => {
           const cat = normalizeCategory(c.category);
-          const cover = c.coverImage ? encodePath(c.coverImage) : "";
+          const cover = c.coverImage ? imageUrl(c.coverImage) : "";
           const beforeN = c.beforeImages?.length || 0;
           const afterN = c.afterImages?.length || 0;
           const galleryN = c.galleryImages?.length || 0;
@@ -378,7 +390,7 @@
     function thumbs(items, caption) {
       return items
         .map((src, i) => {
-          const encoded = encodePath(src);
+          const encoded = imageUrl(src);
           return `
             <div class="thumb" role="button" tabindex="0" aria-label="이미지 확대 보기" data-idx="${i}" data-caption="${safeText(caption)}">
               <img src="${encoded}" alt="${safeText(caption)}" loading="lazy" data-media="true"
