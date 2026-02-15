@@ -56,15 +56,48 @@ def repair_to_categories(repair_str: str | None) -> list[str]:
         return []
     r = nfc(repair_str).lower()
     cats = set()
-    if "세척" in r or "세탁" in r or "오염세척" in r:
+    # 세탁 계열: 세척/오염세척/복원세척/폴리싱/광택 포함
+    if (
+        "세척" in r
+        or "세탁" in r
+        or "오염세척" in r
+        or "복원세척" in r
+        or "폴리싱" in r
+        or "광택" in r
+    ):
         cats.add("세탁")
-    if "염색" in r or "복원염색" in r:
+    # 염색 계열
+    if "염색" in r or "복원염색" in r or "부분복원염색" in r or "전체복원염색" in r:
         cats.add("염색")
-    if "도금" in r:
+    # 도금 계열
+    if "도금" in r or "화이트도금" in r or "골드도금" in r or "부분도금" in r:
         cats.add("도금")
-    if "복원" in r and "염색" not in r:
+    # 복원 계열 (염색과 겹치면 염색 우선)
+    if (
+        ("복원" in r and "염색" not in r)
+        or "엣지코트" in r
+        or "모서리" in r
+        or "가죽" in r
+        or "핸들" in r
+        or "보강" in r
+        or "뜯어짐" in r
+        or "수선" in r
+    ):
         cats.add("복원")
-    if "큐빅" in r or "악세사리" in r or "에나멜" in r or "땜" in r or "연결" in r or "제거" in r or "스크래치" in r or "폴리싱" in r or "광택" in r:
+    # 기타 계열
+    if (
+        "큐빅" in r
+        or "악세사리" in r
+        or "에나멜" in r
+        or "땜" in r
+        or "연결" in r
+        or "제거" in r
+        or "스크래치" in r
+        or "로고" in r
+        or "음각" in r
+        or "도색" in r
+        or "줄" in r
+    ):
         cats.add("기타")
     if not cats:
         cats.add("기타")
@@ -74,7 +107,8 @@ def repair_to_categories(repair_str: str | None) -> list[str]:
 def parse_folder_meta(folder_name: str) -> tuple[str | None, str | None, str | None]:
     """폴더명을 파싱해 (가격, 수선종류, 제품명) 반환."""
     name = nfc(folder_name).strip()
-    parts = [p.strip() for p in name.split("-") if p.strip()]
+    # 일부 입력은 "-" 대신 "_"를 구분자로 사용
+    parts = [p.strip() for p in re.split(r"\s*[-_]\s*", name) if p.strip()]
     if len(parts) < 2:
         return None, None, parts[0] if parts else None
     product_name = parts[0]
@@ -180,11 +214,11 @@ def collect_case_images(case_dir: Path, case_id: str) -> dict:
     return {"before": before, "after": after, "gallery": gallery}
 
 
-def build_cases(scan_roots: list[tuple[str, Path]]):
+def build_cases(scan_roots: list[tuple[str, Path, str]]):
     cases = []
     slug_counts: dict[str, int] = {}
 
-    for category_label, root in scan_roots:
+    for category_label, root, source_key in scan_roots:
         if not root.exists() or not root.is_dir():
             continue
 
@@ -197,7 +231,8 @@ def build_cases(scan_roots: list[tuple[str, Path]]):
             slug_counts[base_slug] = slug_counts.get(base_slug, 0) + 1
             slug = base_slug if slug_counts[base_slug] == 1 else f"{base_slug}-{slug_counts[base_slug]}"
 
-            case_id_src = f"{category_label}/{case_dir.name}"
+            # root가 여러 개인 경우(예: 2026-01 추가)에도 case_id 충돌 방지
+            case_id_src = f"{source_key}/{case_dir.name}"
             case_id = "case-" + hashlib.sha1(case_id_src.encode("utf-8")).hexdigest()[:10]
             imgs = collect_case_images(case_dir, case_id)
             before, after, gallery = imgs["before"], imgs["after"], imgs["gallery"]
@@ -232,8 +267,10 @@ def build_cases(scan_roots: list[tuple[str, Path]]):
 
 def main():
     scan_roots = [
-        ("가방_지갑", PORTFOLIO_ROOT / "가방_지갑"),
-        ("주얼리", PORTFOLIO_ROOT / "주얼리"),
+        ("가방_지갑", PORTFOLIO_ROOT / "가방_지갑", "가방_지갑"),
+        ("주얼리", PORTFOLIO_ROOT / "주얼리", "주얼리"),
+        ("가방_지갑", PORTFOLIO_ROOT / "2026-01" / "가방_지갑", "2026-01/가방_지갑"),
+        ("주얼리", PORTFOLIO_ROOT / "2026-01" / "주얼리", "2026-01/주얼리"),
     ]
 
     cases = build_cases(scan_roots)
@@ -256,5 +293,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
